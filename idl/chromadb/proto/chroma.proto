@@ -46,6 +46,8 @@ message Segment {
     optional string collection = 5;
     optional UpdateMetadata metadata = 6;
     map<string,FilePaths> file_paths = 7;
+    int64 log_position = 8;
+    int32 collection_version = 9;
 }
 
 message Collection {
