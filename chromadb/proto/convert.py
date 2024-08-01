@@ -129,13 +129,14 @@ def from_proto_submit(
 
 
 def from_proto_segment(segment: proto.Segment) -> Segment:
+    if not segment.HasField("collection"):
+        raise ValueError("Collection ID is required in segment")
+
     return Segment(
         id=UUID(hex=segment.id),
         type=segment.type,
         scope=from_proto_segment_scope(segment.scope),
-        collection=None
-        if not segment.HasField("collection")
-        else UUID(hex=segment.collection),
+        collection=UUID(hex=segment.collection),
         metadata=from_proto_metadata(segment.metadata)
         if segment.HasField("metadata")
         else None,
@@ -147,7 +148,7 @@ def to_proto_segment(segment: Segment) -> proto.Segment:
         id=segment["id"].hex,
         type=segment["type"],
         scope=to_proto_segment_scope(segment["scope"]),
-        collection=None if segment["collection"] is None else segment["collection"].hex,
+        collection=segment["collection"].hex,
         metadata=None
         if segment["metadata"] is None
         else to_proto_update_metadata(segment["metadata"]),

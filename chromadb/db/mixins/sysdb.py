@@ -342,7 +342,11 @@ class SqlSysDB(SqlDB, SysDB):
                 rows = list(segment_rows)
                 type = str(rows[0][1])
                 scope = SegmentScope(str(rows[0][2]))
-                collection = self.uuid_from_db(rows[0][3]) if rows[0][3] else None
+
+                if not rows[0][3]:
+                    raise ValueError("Segment is missing collection ID")
+
+                collection = cast(UUID, self.uuid_from_db(rows[0][3]))
                 metadata = self._metadata_from_rows(rows)
                 segments.append(
                     Segment(
