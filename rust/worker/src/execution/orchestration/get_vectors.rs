@@ -66,6 +66,7 @@ pub struct GetVectorsOrchestrator {
     // Query state
     search_user_ids: Vec<String>,
     hnsw_segment_id: Uuid,
+    collection_id: Uuid,
     // State fetched or created for query execution
     record_segment: Option<Segment>,
     collection: Option<Collection>,
@@ -84,6 +85,7 @@ impl GetVectorsOrchestrator {
         system: System,
         get_ids: Vec<String>,
         hnsw_segment_id: Uuid,
+        collection_id: Uuid,
         log: Box<Log>,
         sysdb: Box<SysDb>,
         dispatcher: ComponentHandle<Dispatcher>,
@@ -94,6 +96,7 @@ impl GetVectorsOrchestrator {
             system,
             search_user_ids: get_ids,
             hnsw_segment_id,
+            collection_id,
             log,
             sysdb,
             dispatcher,
@@ -218,14 +221,19 @@ impl Component for GetVectorsOrchestrator {
 
     async fn on_start(&mut self, ctx: &ComponentContext<Self>) {
         // Populate the orchestrator with the initial state - The HNSW Segment, The Record Segment and the Collection
-        let hnsw_segment =
-            match get_hnsw_segment_by_id(self.sysdb.clone(), &self.hnsw_segment_id).await {
-                Ok(segment) => segment,
-                Err(e) => {
-                    terminate_with_error(self.result_channel.take(), e, ctx);
-                    return;
-                }
-            };
+        let hnsw_segment = match get_hnsw_segment_by_id(
+            self.sysdb.clone(),
+            &self.hnsw_segment_id,
+            &self.collection_id,
+        )
+        .await
+        {
+            Ok(segment) => segment,
+            Err(e) => {
+                terminate_with_error(self.result_channel.take(), e, ctx);
+                return;
+            }
+        };
 
         let collection_id = match &hnsw_segment.collection {
             Some(collection_id) => collection_id,

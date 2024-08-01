@@ -49,6 +49,7 @@ pub(crate) struct MetadataQueryOrchestrator {
     system: System,
     // Query state
     metadata_segment_id: Uuid,
+    collection_id: Uuid,
     query_ids: Option<Vec<String>>,
     // State fetched or created for query execution
     record_segment: Option<Segment>,
@@ -74,6 +75,7 @@ pub(crate) struct CountQueryOrchestrator {
     system: System,
     // Query state
     metadata_segment_id: Uuid,
+    collection_id: Uuid,
     // State fetched or created for query execution
     record_segment: Option<Segment>,
     collection: Option<Collection>,
@@ -124,6 +126,7 @@ impl CountQueryOrchestrator {
     pub(crate) fn new(
         system: System,
         metadata_segment_id: &Uuid,
+        collection_id: &Uuid,
         log: Box<Log>,
         sysdb: Box<SysDb>,
         dispatcher: ComponentHandle<Dispatcher>,
@@ -132,6 +135,7 @@ impl CountQueryOrchestrator {
         Self {
             system,
             metadata_segment_id: *metadata_segment_id,
+            collection_id: *collection_id,
             record_segment: None,
             collection: None,
             log,
@@ -146,7 +150,11 @@ impl CountQueryOrchestrator {
         println!("Starting Count Query Orchestrator");
         // Populate the orchestrator with the initial state - The Record Segment and the Collection
         let metdata_segment = self
-            .get_metadata_segment_from_id(self.sysdb.clone(), &self.metadata_segment_id)
+            .get_metadata_segment_from_id(
+                self.sysdb.clone(),
+                &self.metadata_segment_id,
+                &self.collection_id,
+            )
             .await;
 
         let metadata_segment = match metdata_segment {
@@ -246,9 +254,10 @@ impl CountQueryOrchestrator {
         &self,
         mut sysdb: Box<SysDb>,
         metadata_segment_id: &Uuid,
+        collection_id: &Uuid,
     ) -> Result<Segment, Box<dyn ChromaError>> {
         let segments = sysdb
-            .get_segments(Some(*metadata_segment_id), None, None, None)
+            .get_segments(Some(*metadata_segment_id), None, None, *collection_id)
             .await;
         let segment = match segments {
             Ok(segments) => {
@@ -284,7 +293,7 @@ impl CountQueryOrchestrator {
                 None,
                 Some(SegmentType::BlockfileRecord.into()),
                 None,
-                Some(*collection_id),
+                *collection_id,
             )
             .await;
 
@@ -434,6 +443,7 @@ impl MetadataQueryOrchestrator {
     pub(crate) fn new(
         system: System,
         metadata_segment_id: &Uuid,
+        collection_id: &Uuid,
         query_ids: Option<Vec<String>>,
         log: Box<Log>,
         sysdb: Box<SysDb>,
@@ -446,6 +456,7 @@ impl MetadataQueryOrchestrator {
             state: ExecutionState::Pending,
             system,
             metadata_segment_id: *metadata_segment_id,
+            collection_id: *collection_id,
             query_ids,
             record_segment: None,
             metadata_segment: None,
@@ -465,7 +476,11 @@ impl MetadataQueryOrchestrator {
         tracing::info!("Starting Metadata Query Orchestrator");
         // Populate the orchestrator with the initial state - The Metadata Segment, The Record Segment and the Collection
         let metdata_segment = self
-            .get_metadata_segment_from_id(self.sysdb.clone(), &self.metadata_segment_id)
+            .get_metadata_segment_from_id(
+                self.sysdb.clone(),
+                &self.metadata_segment_id,
+                &self.collection_id,
+            )
             .await;
 
         let metadata_segment = match metdata_segment {
@@ -594,9 +609,10 @@ impl MetadataQueryOrchestrator {
         &self,
         mut sysdb: Box<SysDb>,
         metadata_segment_id: &Uuid,
+        collection_id: &Uuid,
     ) -> Result<Segment, Box<dyn ChromaError>> {
         let segments = sysdb
-            .get_segments(Some(*metadata_segment_id), None, None, None)
+            .get_segments(Some(*metadata_segment_id), None, None, *collection_id)
             .await;
         let segment = match segments {
             Ok(segments) => {
@@ -632,7 +648,7 @@ impl MetadataQueryOrchestrator {
                 None,
                 Some(SegmentType::BlockfileRecord.into()),
                 None,
-                Some(*collection_id),
+                *collection_id,
             )
             .await;
 

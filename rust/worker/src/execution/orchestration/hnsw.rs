@@ -112,6 +112,7 @@ pub(crate) struct HnswQueryOrchestrator {
     allowed_ids: Arc<[String]>,
     include_embeddings: bool,
     hnsw_segment_id: Uuid,
+    collection_id: Uuid,
     // State fetched or created for query execution
     hnsw_segment: Option<Segment>,
     record_segment: Option<Segment>,
@@ -152,6 +153,7 @@ impl HnswQueryOrchestrator {
         allowed_ids: Vec<String>,
         include_embeddings: bool,
         segment_id: Uuid,
+        collection_id: Uuid,
         log: Box<Log>,
         sysdb: Box<SysDb>,
         hnsw_index_provider: HnswIndexProvider,
@@ -183,6 +185,7 @@ impl HnswQueryOrchestrator {
             allowed_ids: allowed_ids.into(),
             include_embeddings,
             hnsw_segment_id: segment_id,
+            collection_id,
             hnsw_segment: None,
             record_segment: None,
             collection: None,
@@ -483,14 +486,19 @@ impl Component for HnswQueryOrchestrator {
 
     async fn on_start(&mut self, ctx: &crate::system::ComponentContext<Self>) -> () {
         // Populate the orchestrator with the initial state - The HNSW Segment, The Record Segment and the Collection
-        let hnsw_segment =
-            match get_hnsw_segment_by_id(self.sysdb.clone(), &self.hnsw_segment_id).await {
-                Ok(segment) => segment,
-                Err(e) => {
-                    terminate_with_error(self.result_channel.take(), e, ctx);
-                    return;
-                }
-            };
+        let hnsw_segment = match get_hnsw_segment_by_id(
+            self.sysdb.clone(),
+            &self.hnsw_segment_id,
+            &self.collection_id,
+        )
+        .await
+        {
+            Ok(segment) => segment,
+            Err(e) => {
+                terminate_with_error(self.result_channel.take(), e, ctx);
+                return;
+            }
+        };
 
         let collection_id = match &hnsw_segment.collection {
             Some(collection_id) => collection_id,
